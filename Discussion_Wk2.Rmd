@@ -1,0 +1,94 @@
+---
+title: "Discussion_Wk2"
+output: html_document
+---
+Discussion Activity:
+Continue working on this data set to discern any trends in the bird/wildlife dataset during time period (1995- March 2022) at DIA. You can pick a different time frame and parameters if you are interested using the faa's query tool (https://wildlife.faa.gov/search).
+
+Create a box plot showing a relationship between year and number of birds struck
+Create a plot with ggplot() showing the extent of damage or aircraft by bird collisions
+Use a subset of data where the incident occurred after 2015 and compute the means and SDs of distance by the number of birds struck. The function tapply() is useful for this.
+Create a final plot of bird collisions by engine type and distance (nautical miles from airport). You’ll need to revalue engine type and do some class conversions to create a good-looking plot. Be sure to include labels and title. 
+
+Post to the discussion thread:
+1. Any problems/concerns with data. 
+2. Plots that you think may be relevant to support your assertions.
+3. Summary and interpretation of results. 
+
+```{r setup, include=FALSE}
+#suppressWarnings(expr) #supresses warnings
+if (!require(ggplot2)) {
+  install.packages('ggplot2')
+  require(ggplot2)
+}
+library(forcats)
+library(data.table)
+
+```
+Load the data
+
+```{r birds}
+#read data from csv
+
+#convert column names to lower case
+
+```
+
+## Including Plots
+Create a boxplot that shows the number of birds struck by aircraft by year at DIA. You may need to reorder categories of number of birds struck by using factor.
+
+```{r }
+par(cex.main=0.75) #we adjust the size of title font before we create a boxplot
+
+```
+
+Let's see if airplanes are reporting any damage associated with bird collisions. Load plyr library. To do this follow the prompts in the comments.
+```{r}
+library(plyr)
+#convert damage_level to factor
+
+
+#relabel damage level names for clarity with revalue from plyr
+
+
+#create a plot with ggplot and label the axis and give a title
+
+```
+# Data Slicing
+We'll now slice and dice the data to look at more recent data.
+```{r}
+#create a subset of our data and only look at bird collisions occurring in 2015 and later.
+
+# run summary on year to check we filtered correctly
+
+#use tapply to find means and sd of distance by number of birds struck on the new subset of data
+
+```
+
+Here is more practice slicing and dicing data and creating a good looking plot! Use the original dataset.
+```{r}
+#convert type_eng to factor
+
+#use revalue from plyr to give clear labels to type_eng. Use the data directory to find what the abbreviations mean.
+
+```
+
+```{r}
+#convert num_struck to integer
+
+#remove missing data from type_eng
+
+```
+
+
+Create a final plot of bird collisions by plane type and distance (nautical miles from airport). Use ggplot and make sure that category labels are appropriate, provide title, axis labels and aesthetics are looking good!
+```{r}
+
+
+```
+
+Provide a summary of your process and observations from the data.
+Post to the discussion thread:
+1. Any problems/concerns with data. 
+2. Plots that you think may be relevant to support your assertions.
+3. Summary and interpretation of results. 

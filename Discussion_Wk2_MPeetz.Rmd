@@ -1,0 +1,220 @@
+---
+title: "Discussion_Wk2"
+output: html_document
+---
+Discussion Activity:
+Continue working on this data set to discern any trends in the bird/wildlife dataset during time period (1995- March 2022) at DIA. You can pick a different time frame and parameters if you are interested using the faa's query tool (https://wildlife.faa.gov/search).
+
+Create a box plot showing a relationship between year and number of birds struck
+Create a plot with ggplot() showing the extent of damage or aircraft by bird collisions
+Use a subset of data where the incident occurred after 2015 and compute the means and SDs of distance by the number of birds struck. The function tapply() is useful for this.
+Create a final plot of bird collisions by engine type and distance (nautical miles from airport). You’ll need to revalue engine type and do some class conversions to create a good-looking plot. Be sure to include labels and title. 
+
+Post to the discussion thread:
+1. Any problems/concerns with data. 
+2. Plots that you think may be relevant to support your assertions.
+3. Summary and interpretation of results. 
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#suppressWarnings(expr) #supresses warnings
+if (!require(ggplot2)) {
+  install.packages('ggplot2')
+  require(ggplot2)
+}
+library(forcats)
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library (tidyverse)
+library(data.table)
+```
+Set the directory
+
+Load the data
+```{r set_working_directory}
+setwd("/Users/matth/Desktop/MSDS660/Week 1")
+
+#read data from csv
+birds <- read_csv("data/wildlife.csv", show_col_types = FALSE)
+#convert column names to lower case
+
+mydata <- data.table(birds)
+
+names(mydata) <- tolower(names(mydata))
+
+head(mydata)
+
+```
+
+```{r}
+tail(mydata)
+```
+
+
+## Including Plots
+Create a boxplot that shows the number of birds struck by aircraft by year at DIA. You may need to reorder categories of number of birds struck by using factor.
+
+```{r }
+par(cex.main=0.75) #we adjust the size of title font before we create a boxplot
+
+```
+
+#Box Plot of birds struck by aircraft by year at DIA
+
+```{r}
+
+#first I am going to make a new table that has just the number of strikes and the year summarized. This took at little bit or messing around with the find the call 'n-distinct()' <https://dplyr.tidyverse.org/reference/summarise.html>
+
+yearly_strikes = mydata %>% group_by(incident_year) %>%
+  summarise(strikes = n_distinct(indx_nr),
+            .groups = 'drop')
+
+yearly_strikes
+  
+  
+```
+```{r}
+boxplot(strikes~incident_year,data=yearly_strikes, main="Strikes Per Year",
+        xlab="Incident Year", ylab="Number of Strikes")
+
+
+
+```
+
+
+
+Let's see if airplanes are reporting any damage associated with bird collisions. Load plyr library. To do this follow the prompts in the comments.
+```{r}
+library(plyr)
+
+#relabel damage level names for clarity with revalue from plyr
+
+mydata <- mydata %>%
+  mutate(damage_level = recode(damage_level, "N" = "None", "M" = "Minor", "M?" = "Unknown", "S" = "Substantial",
+                               "D" = "Destroyed"))
+
+head(mydata)
+
+#Convert damage level to factor
+
+is.factor(mydata$damage_level)
+
+mydata$damage_level <- as.factor(mydata$damage_level)
+
+is.factor(mydata$damage_level)
+
+```
+
+```{r}
+#create a plot with ggplot and label the axis and give a title
+
+counts <- table(mydata$damage_level)
+
+barplot(counts, main="Damage Type Caused from Bird Strike", xlab="Damage Type")
+
+plot = ggplot(data = mydata, aes(x = factor(damage_level), y = count(damage_level))) +
+  geom_bar(stat = "identity")
+
+
+
+```
+# Data Slicing
+We'll now slice and dice the data to look at more recent data.
+```{r}
+#create a subset of our data and only look at bird collisions occurring in 2015 and later.
+
+strikes_2015 <- mydata[incident_year >= 2015]
+
+
+# run summary on year to check we filtered correctly
+
+print(unique(strikes_2015$incident_year))
+
+```
+
+
+```{r}
+
+#use tapply to find means and sd of distance by number of birds struck on the new subset of data
+
+distance_complete <- mydata[!(is.na(mydata$distance))]
+print("Mean Distance of Strike From Airport")
+mean(distance_complete$distance)
+print("Standard Deviation of Strike Distance From Airport")
+sd(distance_complete$distance)
+
+mydata$num_struck <-as.numeric(mydata$num_struck)
+print(unique(mydata$num_struck))
+
+
+```
+
+Here is more practice slicing and dicing data and creating a good looking plot! Use the original dataset.
+```{r}
+#convert type_eng to factor
+
+mydata$type_eng <- as.factor(mydata$type_eng)
+
+is.factor(mydata$type_eng)
+
+
+#use revalue from plyr to give clear labels to type_eng. Use the data directory to find what the abbreviations mean.
+
+mydata <- mydata %>%
+  mutate(type_eng = recode(type_eng, "A" = "Piston", "B" = "Turbojet", "C" = "Turboprop", "D" = "Turbofan",
+                               "E" = "Glider", "F" = "helicopter", "Y" = "Other"))
+
+head(mydata)
+
+
+```
+
+```{r}
+#convert num_struck to integer 
+
+mydata$num_struck <-as.numeric(mydata$num_struck)
+class(mydata$num_struck)
+```
+
+```{r}
+
+#remove missing data from type_eng
+
+mydata_complete <- mydata[!(is.na(mydata$type_eng))]
+head(mydata_complete)
+
+```
+
+
+Create a final plot of bird collisions by plane type and distance (nautical miles from airport). Use ggplot and make sure that category labels are appropriate, provide title, axis labels and aesthetics are looking good!
+
+
+```{r}
+unique(mydata_complete$type_eng)
+
+counts_engine <- table(mydata_complete$type_eng)
+
+barplot(counts_engine, main="Engine Type Damaged by Bird Strike", xlab="Engine Type")
+
+ggplot(mydata_complete,aes(mydata_complete$distance))+geom_histogram(bins=50) + ggtitle("Distance From Airport") + labs( y="Number of Strikes", x ="Nautical Miles from Airport")
+
+
+#hist(mydata_complete$distance, main="Distance From Airport of Bird Strike", xlab="Distance in Meters")
+
+```
+
+Provide a summary of your process and observations from the data.
+Post to the discussion thread:
+1. Any problems/concerns with data. 
+2. Plots that you think may be relevant to support your assertions.
+3. Summary and interpretation of results. 
+
+I do have a couple issues with the data, the main one being that it contains a lot of null values that will need to be cleaned up. The second issue is that some of the values, like num_strike, and pretty useless because they do not contain enough information. The value stored in num_struck is listed as "1" in every single row, so it provides no information.
+
+It is interesting to see that the vast majority of strikes occur at the airport, or within 1 nautical mile. The mean distance of a strike is 0.19 miles and the histogram certainly shows this to be true.
+
+The other interesting piece of information is that most of the damage is not very significant, at least to the airplane. Most often no damage occurs, which is great if you are the airplane or a passenger. I am going to go ahead and assume the bird is always "D", or destroyed.
