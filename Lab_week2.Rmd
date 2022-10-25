@@ -1,0 +1,179 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+---
+title: "Visualizing Data in R Demo"
+date: "`r Sys.Date()`"
+output: html_document
+--
+
+The demonstration this week is based on the birds dataset available from the Federal Aviation Administration. Here is a description of the data set and original source can be found [here] (https://wildlife.faa.gov/home). The following is taken from the FAA site:
+"Wildlife strikes with aircraft are increasing in the United States and elsewhere. The number of wildlife strikes reported per year to the FAA increased steadily from about 1,800 in 1990 to 16,000 in 2018. Expanding wildlife populations, increases in number of aircraft movements, a trend toward faster and quieter aircraft, and outreach to the aviation community all have contributed to the observed increase in reported wildlife strikes. As a result of the increase in wildlife strikes, there has been greater emphasis on wildlife strike hazard research and airfield wildlife management." 
+
+If you click on search the database on the faa page, you can create a customized data set to use for this analysis. The data set on worldclass was filtered to include data from the Denver International Airport from 1994 to March 14,2022.
+
+## Set the working directory - change to your directory with setwd()
+```{r set working directory}
+setwd("/Users/Siri/Desktop/Regis/MSDS660/week2")
+```
+
+
+## Load Data and Install other packages
+Install the following packages and and load libraries. The following code will check if a package is installed, and if this is not the case it will install it. 
+
+
+```{r}
+if (!require(ggplot2)) {
+  install.packages('ggplot2')
+  require(ggplot2)
+}
+library(forcats)
+library(data.table)
+
+```
+
+Create a data frame to store the data and look at your data. We have 100 variables and there are a lot of missing values in the data set. However, our data set is relatively big at 8442 observations. 
+
+```{r}
+library(tidyverse)
+suppressWarnings(expr) #supresses warnings
+data <- read_csv("data/wildlife.csv",show_col_types = FALSE)
+data<-as.data.table(data)
+#head(data)
+names(data) <- tolower(names(data)) #convert column names to lower case
+summary(data)
+
+```
+
+
+## Plotting
+Let's produce a few basic plots to get an understanding of our data. We'll make a scatter plot, a histogram, and a side-by-side box plot. 
+
+Produce a scatter plot between height and speed. Are these variables related?
+ 
+```{r}
+plot(height~speed, data=data)
+```
+
+This plot tells us that there is a relatively positive and non-linear relationship.
+
+```{r}
+par(cex.main=1) #we adjust the size of title font before we create a boxplot
+#reorder the categories to reflect order correctly
+data$num_struck<-factor(data$num_struck, levels = c("0","1","2-10","11-100","over 100"))
+boxplot(speed~num_struck, data=data, main= "Relationship between speed of aircraft and the number of birds struck")
+```
+
+Here we can see that the the number of birds struck by the aircraft isn't changed much by the speed at which the aircraft is moving.
+
+## Histogram and Inference for height
+```{r}
+hist(data$height) 
+```
+
+We observe that most collisions occur at low elevations.
+
+Often we may have missing data that will display on a graph unless we do something about it. We use a subset() command below to exclude missing data from the graph.
+At which point of the aircraft journey do the bird collisions occur?
+
+## Barplot showing phase of flight during which bird collisions occured
+```{r}
+ggplot(data=subset(data, !is.na(phase_of_flight)), aes(y = fct_infreq(phase_of_flight))) +
+  geom_bar() +
+  labs(x = "Phase of flight", title="Phase of flight during which bird collisions occured")
+
+```
+
+At approximately what height do most bird collisions occur? You can use the ylim command to customize the scale used on the y-axis.
+
+```{r}
+plot(data$height~data$num_struck, ylim=c(0,2500))
+```
+## Data Slicing
+
+Let's create a sub-sample of our data set and look at the speed of collision for aircrafts that weigh 5701 kg and higher. We'll then look at the speed and the number of birds struck by aircraft on this subset of data. We use tapply function to compute the mean and standard deviation of speed by the number of birds struck.
+
+```{r}
+
+birds_by_amass = data[data$ac_mass > 2,]
+
+tapply(birds_by_amass$speed, birds_by_amass$num_struck, mean, na.rm=TRUE)
+tapply(birds_by_amass$speed, birds_by_amass$num_struck, sd, na.rm=TRUE)
+
+```
+It seems like at higher speeds, the more likely you'll collide with a slightly larger number of birds, but there is higher variability in speed for the category where 1 bird gets struck.
+
+## Count of number of bird collisions by time of day
+We need to create a function to exclude all NAs from our subset of data and again apply the tapply function to get the counts. We need to put time of day in [] because it is an atomic object and not recursive. 
+```{r}
+no_nas = function(x){
+  return(sum(!is.na(x)))
+}
+
+tapply(birds_by_amass$num_struck, birds_by_amass$time_of_day, no_nas)
+
+is.recursive(birds_by_amass$time_of_day) #check that time of day is not recursive
+```
+
+We are going to use ggplot to create a visualization of the number of birds struck by time of day and using feet above ground level. We'll focus on only airplanes with 1 and 2 engines since these were the most common. We'll also filter out missing values by time of day using !is.na function.
+```{r}
+birds_by_12engine = data[data$num_engs < 3,]
+birds_by_12engine$num_struck<- as.integer(birds_by_12engine$num_struck)
+birds_by_12engine<- birds_by_12engine[!is.na(birds_by_12engine$time_of_day),]
+```
+
+Use scales to have our y-axis scales to be correct.
+```{r}
+library(scales)
+```
+
+Final plot!
+```{r}
+plot<-ggplot(data=birds_by_12engine, aes(x=num_struck, y=height)) +
+  geom_col()+
+  facet_wrap(~time_of_day, nrow=4) + 
+  scale_x_continuous(breaks = 1:5, labels=c("0", "1", "2-10","11-100", "over 100")) +
+  scale_y_continuous(limit = c(0, 8000),name="feet above ground level", labels = comma)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),      axis.text.y=element_text(size=5),         plot.title=element_text(size=9),axis.title.y =element_text(size = 7),axis.title.x = element_text(size = 7)
+)+
+  labs(x = 'number of birds struck by aircraft',
+       title = 'The impact of time of day and feet above ground level on wildlife struck by aircraft')
+plot
+```
+
+To be able to save an image, you could right click on the plot and choose "Save image as...". We can save a plot with ggsave like this: 
+```{r}
+ggsave("birds_plot.png", plot, width = 10, height = 10)
+```
+## Automated Exploratory Data Analysis package: SmartEDA
+SmartEDA automates and makes routine EDA tasks easier with just a few lines of code. It produces an HTML report for viewing. You need to install the package and load the library to use it. The function below will place an HTML report in the working directory.
+
+```{r}
+if (!require(SmartEDA)) {
+  install.packages('SmartEDA')
+  require(SmartEDA)
+}
+
+ExpReport(
+  data,
+  label=NULL,
+  op_file="Report.html",
+  op_dir=getwd())
+```
+
+Discussion Activity:
+Continue working on this data set to see if bird/wildlife strikes have increased for the given time period (1994- March 2022) at DIA. You can pick a different time frame and parameters if you are interested using the faa's query tool (https://wildlife.faa.gov/search).
+
+Create a box plot showing a relationship between year and number of birds struck
+Create a plot with ggplot() showing the extent of damage or aircraft by bird collisions
+Use a subset of data where the incident occurred after 2015 and compute the means and SDs of distance by the number of birds struck. The function tapply() is useful for this.
+Create a final plot of bird collisions by engine type and height (feet above ground level). You’ll need to use engine type and do some class conversions to create a good-looking plot. Be sure to include and labels and title. 
+Post to the discussion thread:
+1. Any problems/concerns with data. 
+2. Plots that you think may be relevant to support your assertions.
+3. A one paragraph summary of your analysis process and interpretation of results. 
+
+
